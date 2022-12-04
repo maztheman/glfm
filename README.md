@@ -1,5 +1,6 @@
-# GLFM
-Write OpenGL ES code in C/C++ without writing platform-specific code.
+# GLFM2
+
+Use a GLFW like interface for mobile devices. This fork attempts to make it easier to use with ImGui.
 
 GLFM is an OpenGL ES layer for mobile devices and the web. GLFM supplies an OpenGL ES context and input events. It is largely inspired by [GLFW](https://github.com/glfw/glfw).
 
