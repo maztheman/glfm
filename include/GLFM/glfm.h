@@ -101,6 +101,9 @@
 extern "C" {
 #endif
 
+#define GLFM_TRUE 1
+#define GLFM_FALSE 0
+
 // MARK: - Enums
 
 typedef enum {
@@ -137,6 +140,14 @@ typedef enum {
     GLFMSwapBehaviorBufferDestroyed,
     GLFMSwapBehaviorBufferPreserved,
 } GLFMSwapBehavior;
+
+// hints
+
+// display hint
+#define GLFM_CONTEXT_RENDER_API 0xFE
+
+//init hint
+#define GLFW_APP_DATA 0xA0
 
 /// GLFMUserInterfaceChrome defines whether system UI chrome (status bar, navigation bar) is shown.
 /// This value is ignored on Emscripten.
@@ -329,9 +340,28 @@ typedef void (*GLFMSensorFunc)(GLFMDisplay *display, GLFMSensorEvent event);
 
 // MARK: - Functions
 
+/// can be used to set platform specific hints used fpr initialization
+void glfmInitHint(int hint, void* value);
+
+/// Creates platform specific runtime
+int glfmInit();
+
+/// Set the diaplay hints
+void glfmDisplayHint(int hint, int value);
+
+/// Creates the display
+/// uses diaplay hints, eg which render api that should be used
+GLFMDisplay* glfmCreateDisplay();
+
+
+void glfmPollEvents();
+
+// GLFM_TRUE if app should close
+int glfmAppShouldClose();
+
 /// Main entry point for the app, where the display can be initialized and the GLFMMainLoopFunc
 /// can be set.
-extern void glfmMain(GLFMDisplay *display);
+//extern void glfmMain(GLFMDisplay *display);
 
 /// Init the display condifuration. Should only be called in glfmMain.
 /// If the device does not support the preferred rendering API, the next available rendering API is

@@ -18,7 +18,7 @@
  3. This notice may not be removed or altered from any source distribution.
  */
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 
 #if !defined(GLFM_INCLUDE_METAL)
 #define GLFM_INCLUDE_METAL 1

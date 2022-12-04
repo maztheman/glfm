@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.1.0) # Cmake 3.18 required for Xcode 12
+cmake_minimum_required(VERSION 3.11..3.22) # Cmake 3.18 required for Xcode 12
 
 project(GLFM C)
 
 option(GLFM_BUILD_EXAMPLE "Build the GLFM example" OFF)
 
-set(GLFM_HEADERS include/glfm.h)
+set(GLFM_HEADERS include/GLFM/glfm.h)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
     set(GLFM_SRC src/glfm_platform.h src/glfm_platform_emscripten.c)
@@ -23,7 +23,10 @@ else() # Assume iOS
     set(GLFM_COMPILE_FLAGS "-Wno-objc-interface-ivars -Wno-objc-missing-property-synthesis -Wno-direct-ivar-access")
 endif()
 
-add_library(glfm ${GLFM_SRC} ${GLFM_HEADERS})
+add_library(glfm STATIC)
+
+target_sources(glfm PRIVATE ${GLFM_SRC})
+
 target_include_directories(glfm PUBLIC include)
 target_include_directories(glfm PRIVATE src)
 
