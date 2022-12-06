@@ -116,15 +116,6 @@ GLFMInterfaceOrientation glfmGetSupportedInterfaceOrientation(GLFMDisplay *displ
     return display ? display->supportedOrientations : GLFMInterfaceOrientationAll;
 }
 
-GLFMUserInterfaceOrientation glfmGetUserInterfaceOrientation(GLFMDisplay *display) {
-    return (GLFMUserInterfaceOrientation)glfmGetSupportedInterfaceOrientation(display);
-}
-
-void glfmSetUserInterfaceOrientation(GLFMDisplay *display,
-                                     GLFMUserInterfaceOrientation supportedOrientations) {
-    glfmSetSupportedInterfaceOrientation(display, (GLFMInterfaceOrientation)supportedOrientations);
-}
-
 void glfmSetUserData(GLFMDisplay *display, void *userData) {
     if (display) {
         display->userData = userData;
