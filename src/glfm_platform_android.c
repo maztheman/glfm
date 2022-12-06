@@ -1660,6 +1660,7 @@ void glfmPollEvents()
 {
     GLFMPlatformData *platformData = platformDataGlobal;
     struct android_app *app = platformData->app;
+    JavaVM *vm = app->activity->vm;
 
     // TODO: move this to glfmPollEvents(), which will call the callbacks
     //  we need access to this outside of thes file if we want to use as a lib
