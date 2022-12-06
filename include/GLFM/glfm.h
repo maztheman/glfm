@@ -344,20 +344,20 @@ typedef void (*GLFMSensorFunc)(GLFMDisplay *display, GLFMSensorEvent event);
 void glfmInitHint(int hint, void* value);
 
 /// Creates platform specific runtime
-int glfmInit();
+int glfmInit(void);
 
 /// Set the diaplay hints
 void glfmDisplayHint(int hint, int value);
 
 /// Creates the display
 /// uses diaplay hints, eg which render api that should be used
-GLFMDisplay* glfmCreateDisplay();
+GLFMDisplay* glfmCreateDisplay(void);
 
 
-void glfmPollEvents();
+void glfmPollEvents(void);
 
 // GLFM_TRUE if app should close
-int glfmAppShouldClose();
+int glfmAppShouldClose(void);
 
 /// Main entry point for the app, where the display can be initialized and the GLFMMainLoopFunc
 /// can be set.
