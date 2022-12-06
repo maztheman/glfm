@@ -243,13 +243,6 @@ void *glfmGetUserData(GLFMDisplay *display);
 /// must happen in application code.
 void glfmSwapBuffers(GLFMDisplay *display);
 
-/// Deprecated. Use glfmGetSupportedInterfaceOrientation
-GLFMUserInterfaceOrientation glfmGetUserInterfaceOrientation(GLFMDisplay *display) GLFM_DEPRECATED;
-
-/// Deprecated. Use glfmSetSupportedInterfaceOrientation
-void glfmSetUserInterfaceOrientation(GLFMDisplay *display,
-                                     GLFMUserInterfaceOrientation supportedOrientations) GLFM_DEPRECATED;
-
 /// Returns the supported user interface orientations. Default is GLFMInterfaceOrientationAll.
 /// Actualy support may be limited by the device or platform.
 GLFMInterfaceOrientation glfmGetSupportedInterfaceOrientation(GLFMDisplay *display);
