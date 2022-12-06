@@ -21,7 +21,7 @@
 #ifndef GLFM_PLATFORM_H
 #define GLFM_PLATFORM_H
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

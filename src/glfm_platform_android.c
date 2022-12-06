@@ -1549,6 +1549,7 @@ int glfmInit()
     {
         glfmPollEvents();
 
+        //this is like SwapInterval or something figure out how we can use this...
         if (platformData->animating && platformData->display)
         {
             platformData->swapCalled = false;
