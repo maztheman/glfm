@@ -40,6 +40,7 @@
 #else
 #define LOG_DEBUG(...) __android_log_print(ANDROID_LOG_INFO, "GLFM", __VA_ARGS__)
 #endif
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "GLFM", __VA_ARGS__))
 
 //#define LOG_LIFECYCLE(...) __android_log_print(ANDROID_LOG_INFO, "GLFM", __VA_ARGS__)
 #define LOG_LIFECYCLE(...) \
@@ -508,7 +509,7 @@ static uint32_t glfm__getUnicodeChar(GLFMPlatformData *platformData, AInputEvent
 
 static bool glfm__eglContextInit(GLFMPlatformData *platformData)
 {
-
+    LOGI("EGL CTX INIT START");
     // Available in eglext.h in API 18
     static const int EGL_CONTEXT_MAJOR_VERSION_KHR = 0x3098;
     static const int EGL_CONTEXT_MINOR_VERSION_KHR = 0x30FB;
@@ -602,7 +603,7 @@ static bool glfm__eglContextInit(GLFMPlatformData *platformData)
     }
     else
     {
-        LOG_DEBUG("EGL MAKE CURRENT");
+        LOGI("EGL MAKE CURRENT");
         platformData->eglContextCurrent = true;
         if (created && platformData->display)
         {
