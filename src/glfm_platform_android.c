@@ -602,6 +602,7 @@ static bool glfm__eglContextInit(GLFMPlatformData *platformData)
     }
     else
     {
+        LOG_DEBUG("EGL MAKE CURRENT");
         platformData->eglContextCurrent = true;
         if (created && platformData->display)
         {
