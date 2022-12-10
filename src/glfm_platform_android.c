@@ -1257,6 +1257,7 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
         {
             int32_t aKeyCode = AKeyEvent_getKeyCode(event);
             int32_t aAction = AKeyEvent_getAction(event);
+            int32_t aMeta = AKeyEvent_getMetaState(event);
             if (aKeyCode != 0)
             {
                 GLFMKey key;
@@ -1328,11 +1329,11 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                     break;
                 }
 
-                if (key != 0)
+                //if (key != 0)
                 {
                     if (aAction == AKEY_EVENT_ACTION_UP)
                     {
-                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, 0);
+                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, aMeta);
                         if (handled == 0 && aKeyCode == AKEYCODE_BACK)
                         {
                             handled = glfm__handleBackButton(app) ? 1 : 0;
@@ -1349,7 +1350,7 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                         {
                             keyAction = GLFMKeyActionPressed;
                         }
-                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, keyAction, 0);
+                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, keyAction, aMeta);
                     }
                     else if (aAction == AKEY_EVENT_ACTION_MULTIPLE)
                     {
@@ -1357,9 +1358,9 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                         for (i = AKeyEvent_getRepeatCount(event); i > 0; i--)
                         {
                             handled |=
-                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionPressed, 0);
+                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionPressed, aMeta);
                             handled |=
-                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, 0);
+                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, aMeta);
                         }
                     }
                 }
