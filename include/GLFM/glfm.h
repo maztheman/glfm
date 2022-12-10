@@ -137,7 +137,7 @@ typedef bool (*GLFMTouchFunc)(GLFMDisplay *display, int touch, GLFMTouchPhase ph
 
 /// Callback function for key events.
 /// The function should return true if the event was handled, and false otherwise.
-typedef bool (*GLFMKeyFunc)(GLFMDisplay *display, GLFMKey keyCode, GLFMKeyAction action,
+typedef bool (*GLFMKeyFunc)(GLFMDisplay *display, int key, int scanCode, int action,
                             int modifiers);
 
 /// Callback function for character input events.

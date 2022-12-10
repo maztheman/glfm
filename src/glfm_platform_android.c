@@ -1332,7 +1332,7 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                 {
                     if (aAction == AKEY_EVENT_ACTION_UP)
                     {
-                        handled = platformData->display->keyFunc(platformData->display, key, GLFMKeyActionReleased, 0);
+                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, 0);
                         if (handled == 0 && aKeyCode == AKEYCODE_BACK)
                         {
                             handled = glfm__handleBackButton(app) ? 1 : 0;
@@ -1349,7 +1349,7 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                         {
                             keyAction = GLFMKeyActionPressed;
                         }
-                        handled = platformData->display->keyFunc(platformData->display, key, keyAction, 0);
+                        handled = platformData->display->keyFunc(platformData->display, key, aKeyCode, keyAction, 0);
                     }
                     else if (aAction == AKEY_EVENT_ACTION_MULTIPLE)
                     {
@@ -1357,9 +1357,9 @@ static int32_t glfm__onInputEvent(struct android_app *app, AInputEvent *event)
                         for (i = AKeyEvent_getRepeatCount(event); i > 0; i--)
                         {
                             handled |=
-                              platformData->display->keyFunc(platformData->display, key, GLFMKeyActionPressed, 0);
+                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionPressed, 0);
                             handled |=
-                              platformData->display->keyFunc(platformData->display, key, GLFMKeyActionReleased, 0);
+                              platformData->display->keyFunc(platformData->display, key, aKeyCode, GLFMKeyActionReleased, 0);
                         }
                     }
                 }
