@@ -3,7 +3,7 @@
 
 #if defined(__ANDROID__)
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 #include "glfm_internal.h"
 
 #include <EGL/egl.h>
@@ -1549,7 +1549,7 @@ static void *glfm__mainLoop(void *param) {
         platformData->display->supportedOrientations = GLFMInterfaceOrientationAll;
         platformData->display->swapBehavior = GLFMSwapBehaviorPlatformDefault;
         platformData->resizeEventWaitFrames = GLFM_RESIZE_EVENT_MAX_WAIT_FRAMES;
-        glfmMain(platformData->display);
+        glfmPreConfig(platformData->display);
     }
 
     // Setup window params
@@ -1594,57 +1594,8 @@ static void *glfm__mainLoop(void *param) {
     pthread_cond_broadcast(&platformData->cond);
     pthread_mutex_unlock(&platformData->mutex);
 
-    // Run the main loop
-    while (!platformData->destroyRequested) {
-        int eventIdentifier;
-
-        while ((eventIdentifier = ALooper_pollAll(platformData->animating ? 0 : -1,
-                                                  NULL, NULL, NULL)) >= 0) {
-            if (eventIdentifier == GLFMLooperIDCommand) {
-                uint8_t cmd = 0;
-                if (read(platformData->commandPipeRead, &cmd, sizeof(cmd)) == sizeof(cmd)) {
-                    GLFMActivityCommand command = (GLFMActivityCommand)cmd;
-                    glfm__onAppCmd(platformData, command);
-                } else {
-                    GLFM_LOG("Couldn't read from pipe");
-                }
-            } else if (eventIdentifier == GLFMLooperIDInput) {
-                glfm__onInputEvent(platformData);
-            } else if (eventIdentifier == GLFMLooperIDSensor) {
-                glfm__onSensorEvent(platformData);
-            }
-            if (platformData->destroyRequested) {
-                break;
-            }
-        }
-
-        if (platformData->animating && platformData->display) {
-            platformData->swapCalled = false;
-            glfm__drawFrame(platformData);
-            if (!platformData->swapCalled) {
-                // Sleep until next swap time (1/60 second after last swap time)
-                const float refreshRate = glfm__getRefreshRate(platformData->display);
-                const double sleepUntilTime = platformData->lastSwapTime + 1.0 / (double)refreshRate;
-                double now = glfmGetTime();
-                if (now >= sleepUntilTime) {
-                    platformData->lastSwapTime = now;
-                } else {
-                    // Sleep until 500 microseconds before deadline
-                    const double offset = 0.0005;
-                    while (true) {
-                        double sleepDuration = sleepUntilTime - now - offset;
-                        if (sleepDuration <= 0) {
-                            platformData->lastSwapTime = sleepUntilTime;
-                            break;
-                        }
-                        useconds_t sleepDurationMicroseconds = (useconds_t) (sleepDuration * 1000000);
-                        usleep(sleepDurationMicroseconds);
-                        now = glfmGetTime();
-                    }
-                }
-            }
-        }
-    }
+    // when this exists its as if main func exits
+    glfmMain(platformData->display);
 
     // Cleanup
     GLFM_LOG_LIFECYCLE("Destroying thread");
@@ -2798,6 +2749,38 @@ void *glfmGetAndroidActivity(const GLFMDisplay *display) {
     }
     GLFMPlatformData *platformData = display->platformData;
     return platformData->activity;
+}
+
+// if app is null, then we should close
+int glfmAppShouldClose()
+{
+    GLFMPlatformData *platformData = platformDataGlobal;
+    return platformData->destroyRequested ? GLFM_TRUE : GLFM_FALSE;
+}
+
+void glfmPollEvents()
+{
+    GLFMPlatformData *platformData = platformDataGlobal;
+    int eventIdentifier;
+    while ((eventIdentifier = ALooper_pollAll(platformData->animating ? 0 : -1,
+                                                NULL, NULL, NULL)) >= 0) {
+        if (eventIdentifier == GLFMLooperIDCommand) {
+            uint8_t cmd = 0;
+            if (read(platformData->commandPipeRead, &cmd, sizeof(cmd)) == sizeof(cmd)) {
+                GLFMActivityCommand command = (GLFMActivityCommand)cmd;
+                glfm__onAppCmd(platformData, command);
+            } else {
+                GLFM_LOG("Couldn't read from pipe");
+            }
+        } else if (eventIdentifier == GLFMLooperIDInput) {
+            glfm__onInputEvent(platformData);
+        } else if (eventIdentifier == GLFMLooperIDSensor) {
+            glfm__onSensorEvent(platformData);
+        }
+        if (platformData->destroyRequested) {
+            break;
+        }
+    }
 }
 
 #endif // __ANDROID__

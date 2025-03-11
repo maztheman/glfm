@@ -3,7 +3,7 @@
 
 #if defined(__EMSCRIPTEN__)
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 
 #include <EGL/egl.h>
 #include <emscripten/emscripten.h>

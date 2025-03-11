@@ -5,7 +5,7 @@ project(GLFM C)
 option(GLFM_BUILD_EXAMPLES "Build the GLFM examples" OFF)
 option(GLFM_USE_CLANG_TIDY "Use Clang Tidy when building (Android and Emscripten only)" OFF)
 
-set(GLFM_HEADERS include/glfm.h)
+set(GLFM_HEADERS include/GLFM/glfm.h)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(GLFM_SRC src/glfm_internal.h src/glfm_emscripten.c)
@@ -59,7 +59,10 @@ if (GLFM_USE_CLANG_TIDY)
     endif()
 endif()
 
-add_library(glfm ${GLFM_SRC} ${GLFM_HEADERS})
+add_library(glfm STATIC)
+
+target_sources(glfm PRIVATE ${GLFM_SRC})
+
 target_include_directories(glfm PUBLIC include)
 target_include_directories(glfm PRIVATE src)
 

@@ -3,7 +3,7 @@
 
 #if defined(__APPLE__)
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 #include "glfm_internal.h"
 
 #if !defined(GLFM_INCLUDE_METAL)

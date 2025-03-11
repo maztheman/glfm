@@ -4,7 +4,7 @@
 #ifndef GLFM_INTERNAL_H
 #define GLFM_INTERNAL_H
 
-#include "glfm.h"
+#include "GLFM/glfm.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
