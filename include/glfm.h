@@ -77,6 +77,9 @@
 extern "C" {
 #endif
 
+#define GLFM_TRUE 1
+#define GLFM_FALSE 0
+
 // MARK: - Enums
 
 typedef enum {
@@ -167,6 +170,7 @@ typedef enum {
     GLFMTouchPhaseMoved,
     GLFMTouchPhaseEnded,
     GLFMTouchPhaseCancelled,
+    GLFMTouchPhaseScroll,
 } GLFMTouchPhase;
 
 typedef enum {
@@ -861,6 +865,15 @@ void glfmPerformHapticFeedback(GLFMDisplay *display, GLFMHapticFeedbackStyle sty
 
 /// Returns `true` if this is an Apple platform that supports Metal, `false` otherwise.
 bool glfmIsMetalSupported(const GLFMDisplay *display);
+
+void glfmPollEvents(void);
+
+// GLFM_TRUE if app should close
+int glfmAppShouldClose(void);
+
+/// Allow for configuration before create
+extern void glfmPreConfig(GLFMDisplay *display);
+
 
 #if defined(__APPLE__) || defined(GLFM_EXPOSE_NATIVE_APPLE)
 
