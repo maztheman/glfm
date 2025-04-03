@@ -59,7 +59,10 @@ if (GLFM_USE_CLANG_TIDY)
     endif()
 endif()
 
-add_library(glfm ${GLFM_SRC} ${GLFM_HEADERS})
+add_library(glfm STATIC)
+
+target_sources(glfm PRIVATE ${GLFM_SRC})
+
 target_include_directories(glfm PUBLIC include)
 target_include_directories(glfm PRIVATE src)
 

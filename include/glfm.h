@@ -77,6 +77,9 @@
 extern "C" {
 #endif
 
+#define GLFM_TRUE 1
+#define GLFM_FALSE 0
+
 // MARK: - Enums
 
 typedef enum {
@@ -167,6 +170,7 @@ typedef enum {
     GLFMTouchPhaseMoved,
     GLFMTouchPhaseEnded,
     GLFMTouchPhaseCancelled,
+    GLFMTouchPhaseScroll,
 } GLFMTouchPhase;
 
 typedef enum {
@@ -862,6 +866,15 @@ void glfmPerformHapticFeedback(GLFMDisplay *display, GLFMHapticFeedbackStyle sty
 /// Returns `true` if this is an Apple platform that supports Metal, `false` otherwise.
 bool glfmIsMetalSupported(const GLFMDisplay *display);
 
+void glfmPollEvents(void);
+
+// GLFM_TRUE if app should close
+int glfmAppShouldClose(void);
+
+/// Allow for configuration before create
+extern void glfmPreConfig(GLFMDisplay *display);
+
+
 #if defined(__APPLE__) || defined(GLFM_EXPOSE_NATIVE_APPLE)
 
 /// *Apple platforms only*: Returns a pointer to an `MTKView` instance, or `NULL` if Metal is not available.
@@ -891,6 +904,13 @@ ANativeActivity *glfmAndroidGetActivity(void) GLFM_DEPRECATED("Use glfmGetAndroi
 /// `ANativeActivity` is kept, call this function again to get an updated reference in ``GLFMSurfaceCreatedFunc`` or
 /// ``GLFMAppFocusFunc``.
 void *glfmGetAndroidActivity(const GLFMDisplay *display);
+
+#define GLFM_ERR_OK 0
+#define GLFM_ERR_SIZE_TOO_SMALL -2
+#define GLFM_ERR_ASSET_NOT_FOUND -3
+#define GLFM_ERR_INVALID_ARGUMENT -4
+
+int glfmGetAsset(GLFMDisplay* display, const char* filename, void* data, size_t* size);
 
 #endif // GLFM_EXPOSE_NATIVE_ANDROID
 

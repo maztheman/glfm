@@ -61,7 +61,7 @@ typedef struct {
 
     ANativeWindow *pendingWindow;
     AInputQueue *pendingInputQueue;
-
+    AAssetManager *assetManager;
     ANativeActivity *activity;
     AConfiguration *config;
     bool destroyRequested;
@@ -1292,7 +1292,9 @@ static bool glfm__onTouchEvent(GLFMPlatformData *platformData, AInputEvent *even
     const int maxTouches = platformData->multitouchEnabled ? GLFM_MAX_SIMULTANEOUS_TOUCHES : 1;
     const int32_t action = AMotionEvent_getAction(event);
     const uint32_t maskedAction = (uint32_t)action & (uint32_t)AMOTION_EVENT_ACTION_MASK;
-
+    const size_t pointerIndex = (size_t)(((uint32_t)action &
+        (uint32_t)AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >>
+        (uint32_t)AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
     GLFMTouchPhase phase;
     bool validAction = true;
 
@@ -1312,6 +1314,9 @@ static bool glfm__onTouchEvent(GLFMPlatformData *platformData, AInputEvent *even
         case AMOTION_EVENT_ACTION_CANCEL:
             phase = GLFMTouchPhaseCancelled;
             break;
+        case AMOTION_EVENT_ACTION_SCROLL:
+            phase = GLFMTouchPhaseScroll;
+            break;
         default:
             phase = GLFMTouchPhaseCancelled;
             validAction = false;
@@ -1328,14 +1333,19 @@ static bool glfm__onTouchEvent(GLFMPlatformData *platformData, AInputEvent *even
                     display->touchFunc(display, touchNumber, phase, x, y);
                 }
             }
+        } else if (phase == GLFMTouchPhaseScroll) {
+            if (display->mouseWheelFunc) {
+                double x = (double)AMotionEvent_getX(event, pointerIndex);
+                double y = (double)AMotionEvent_getY(event, pointerIndex);
+                double deltaX = (double)AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HSCROLL, pointerIndex);
+                double deltaY = (double)AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, pointerIndex);
+                display->mouseWheelFunc(display, x, y, GLFMMouseWheelDeltaPixel, deltaX, deltaY, 0.0);
+            }
         } else {
-            const size_t index = (size_t)(((uint32_t)action &
-                    (uint32_t)AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >>
-                    (uint32_t)AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
-            const int touchNumber = AMotionEvent_getPointerId(event, index);
+            const int touchNumber = AMotionEvent_getPointerId(event, pointerIndex);
             if (touchNumber >= 0 && touchNumber < maxTouches && display->touchFunc) {
-                double x = (double)AMotionEvent_getX(event, index);
-                double y = (double)AMotionEvent_getY(event, index);
+                double x = (double)AMotionEvent_getX(event, pointerIndex);
+                double y = (double)AMotionEvent_getY(event, pointerIndex);
                 display->touchFunc(display, touchNumber, phase, x, y);
             }
         }
@@ -1549,7 +1559,7 @@ static void *glfm__mainLoop(void *param) {
         platformData->display->supportedOrientations = GLFMInterfaceOrientationAll;
         platformData->display->swapBehavior = GLFMSwapBehaviorPlatformDefault;
         platformData->resizeEventWaitFrames = GLFM_RESIZE_EVENT_MAX_WAIT_FRAMES;
-        glfmMain(platformData->display);
+        glfmPreConfig(platformData->display);
     }
 
     // Setup window params
@@ -1594,59 +1604,8 @@ static void *glfm__mainLoop(void *param) {
     pthread_cond_broadcast(&platformData->cond);
     pthread_mutex_unlock(&platformData->mutex);
 
-    // Run the main loop
-    while (!platformData->destroyRequested) {
-
-        // Poll input
-        int eventIdentifier;
-        while ((eventIdentifier = ALooper_pollOnce(platformData->animating ? 0 : -1,
-                                                   NULL, NULL, NULL)) > ALOOPER_POLL_TIMEOUT) {
-            if (eventIdentifier == GLFMLooperIDCommand) {
-                uint8_t cmd = 0;
-                if (read(platformData->commandPipeRead, &cmd, sizeof(cmd)) == sizeof(cmd)) {
-                    GLFMActivityCommand command = (GLFMActivityCommand)cmd;
-                    glfm__onAppCmd(platformData, command);
-                } else {
-                    GLFM_LOG("Couldn't read from pipe");
-                }
-            } else if (eventIdentifier == GLFMLooperIDInput) {
-                glfm__onInputEvent(platformData);
-            } else if (eventIdentifier == GLFMLooperIDSensor) {
-                glfm__onSensorEvent(platformData);
-            }
-            if (platformData->destroyRequested) {
-                break;
-            }
-        }
-
-        // Render
-        if (platformData->animating && platformData->display) {
-            platformData->swapCalled = false;
-            glfm__drawFrame(platformData);
-            if (!platformData->swapCalled) {
-                // Sleep until next swap time (1/60 second after last swap time)
-                const float refreshRate = glfm__getRefreshRate(platformData->display);
-                const double sleepUntilTime = platformData->lastSwapTime + 1.0 / (double)refreshRate;
-                double now = glfmGetTime();
-                if (now >= sleepUntilTime) {
-                    platformData->lastSwapTime = now;
-                } else {
-                    // Sleep until 500 microseconds before deadline
-                    const double offset = 0.0005;
-                    while (true) {
-                        double sleepDuration = sleepUntilTime - now - offset;
-                        if (sleepDuration <= 0) {
-                            platformData->lastSwapTime = sleepUntilTime;
-                            break;
-                        }
-                        useconds_t sleepDurationMicroseconds = (useconds_t) (sleepDuration * 1000000);
-                        usleep(sleepDurationMicroseconds);
-                        now = glfmGetTime();
-                    }
-                }
-            }
-        }
-    }
+    // when this exists its as if main func exits
+    glfmMain(platformData->display);
 
     // Cleanup
     GLFM_LOG_LIFECYCLE("Destroying thread");
@@ -1656,7 +1615,13 @@ static void *glfm__mainLoop(void *param) {
     }
     if (platformData->sensorEventQueue) {
         glfm__setAllRequestedSensorsEnabled(platformData->display, false);
+        #pragma clang diagnostic push
+        // Builders convert C warnings to errors, so suppress the
+        // error from ASensorManager_getInstance being deprecated
+        // in Android 26.
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         ASensorManager *sensorManager = ASensorManager_getInstance();
+        #pragma clang diagnostic pop
         ASensorManager_destroyEventQueue(sensorManager, platformData->sensorEventQueue);
         platformData->sensorEventQueue = NULL;
     }
@@ -2170,7 +2135,13 @@ static void glfm__displayChromeUpdated(GLFMDisplay *display) {
 }
 
 static const ASensor *glfm__getDeviceSensor(GLFMSensor sensor) {
+    #pragma clang diagnostic push
+    // Builders convert C warnings to errors, so suppress the
+    // error from ASensorManager_getInstance being deprecated
+    // in Android 26.
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     ASensorManager *sensorManager = ASensorManager_getInstance();
+    #pragma clang diagnostic pop
     switch (sensor) {
         case GLFMSensorAccelerometer:
             return ASensorManager_getDefaultSensor(sensorManager, ASENSOR_TYPE_ACCELEROMETER);
@@ -2204,7 +2175,13 @@ static void glfm__setAllRequestedSensorsEnabled(GLFMDisplay *display, bool enabl
             continue;
         }
         if (platformData->sensorEventQueue == NULL) {
+            #pragma clang diagnostic push
+            // Builders convert C warnings to errors, so suppress the
+            // error from ASensorManager_getInstance being deprecated
+            // in Android 26.
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             ASensorManager *sensorManager = ASensorManager_getInstance();
+            #pragma clang diagnostic pop
             platformData->sensorEventQueue = ASensorManager_createEventQueue(sensorManager,
                     ALooper_forThread(), GLFMLooperIDSensor, NULL, NULL);
             if (!platformData->sensorEventQueue) {
@@ -2267,7 +2244,79 @@ static jobject glfm__getSystemService(GLFMPlatformData *platformData, const char
     return service;
 }
 
+static void glfm__SDK30_updateKeyboardVisibility(GLFMPlatformData *platformData, int visible);
+
+static void glfm__SDK30_updateKeyboardVisibilityCallback(GLFMPlatformData *platformData, void *userData) {
+    intptr_t visible_ = (intptr_t)userData;
+    glfm__SDK30_updateKeyboardVisibility(platformData, (int)visible_);
+}
+
+static void glfm__SDK30_updateKeyboardVisibility(GLFMPlatformData *platformData, int visible) {
+
+    if (!platformData || !platformData->activity) {
+        return;
+    }
+    const int SDK_INT = platformData->activity->sdkVersion;
+    if (SDK_INT < 30) {
+        return;
+    }
+
+    JavaVM *jvm = platformData->activity->vm;
+    JNIEnv *jni = NULL;
+    (*jvm)->GetEnv(jvm, (void **) &jni, JNI_VERSION_1_2);
+    if (!jni || (*jni)->ExceptionCheck(jni)) {
+        return;
+    }
+
+    jobject decorView = glfm__getDecorView(jni, platformData);
+    if (!decorView) {
+        return;
+    }
+
+    bool setNow = true;
+    bool isUiThread = ALooper_forThread() == platformData->uiLooper;
+    if (!isUiThread) {
+        bool isDecorViewAttached;
+        isDecorViewAttached = glfm__callJavaMethod(jni, decorView, "isAttachedToWindow", "()Z", Boolean);
+        if (glfm__wasJavaExceptionThrown(jni)) {
+            (*jni)->DeleteLocalRef(jni, decorView);
+            return;
+        }
+        setNow = !isDecorViewAttached;
+    }
+
+    if (!setNow) {
+        // Set on the UI thread
+        glfm__runOnUIThread(platformData, glfm__SDK30_updateKeyboardVisibilityCallback, (void*)(intptr_t)visible);
+    } else {
+        // Set now
+        jobject windowInsetsController = glfm__callJavaMethod(jni, decorView, "getWindowInsetsController",
+                                                                "()Landroid/view/WindowInsetsController;", Object);
+        jclass windowInsetsTypeClass = (*jni)->FindClass(jni, "android/view/WindowInsets$Type");
+        if (windowInsetsController && windowInsetsTypeClass && !glfm__wasJavaExceptionThrown(jni)) {
+            const jint vkeyboard = glfm__callJavaStaticMethod(jni, windowInsetsTypeClass, "ime",
+                                                                "()I", Int);
+
+            if (visible == 1) {
+                glfm__callJavaMethodWithArgs(jni, windowInsetsController, "show", "(I)V", Void, vkeyboard);
+            } else {
+                glfm__callJavaMethodWithArgs(jni, windowInsetsController, "hide", "(I)V", Void, vkeyboard);
+            }
+
+            (*jni)->DeleteLocalRef(jni, windowInsetsController);
+            (*jni)->DeleteLocalRef(jni, windowInsetsTypeClass);
+            glfm__clearJavaException(jni);
+        }
+    }
+    (*jni)->DeleteLocalRef(jni, decorView);
+}
+
 static bool glfm__setKeyboardVisible(GLFMPlatformData *platformData, bool visible) {
+    const int SDK_INT = platformData->activity->sdkVersion;
+    if (SDK_INT >= 30) {
+        glfm__SDK30_updateKeyboardVisibility(platformData, visible ? 1 : 0);
+        return true;
+    }
     static const int InputMethodManager_SHOW_FORCED = 2;
 
     JNIEnv *jni = platformData->jniEnv;
@@ -2800,6 +2849,70 @@ void *glfmGetAndroidActivity(const GLFMDisplay *display) {
     }
     GLFMPlatformData *platformData = display->platformData;
     return platformData->activity;
+}
+
+// if app is null, then we should close
+int glfmAppShouldClose(void)
+{
+    GLFMPlatformData *platformData = platformDataGlobal;
+    return platformData->destroyRequested ? GLFM_TRUE : GLFM_FALSE;
+}
+
+void glfmPollEvents(void)
+{
+    GLFMPlatformData *platformData = platformDataGlobal;
+    int eventIdentifier;
+    while ((eventIdentifier = ALooper_pollOnce(platformData->animating ? 0 : -1,
+                                                NULL, NULL, NULL)) >= 0) {
+        if (eventIdentifier == GLFMLooperIDCommand) {
+            uint8_t cmd = 0;
+            if (read(platformData->commandPipeRead, &cmd, sizeof(cmd)) == sizeof(cmd)) {
+                GLFMActivityCommand command = (GLFMActivityCommand)cmd;
+                glfm__onAppCmd(platformData, command);
+            } else {
+                GLFM_LOG("Couldn't read from pipe");
+            }
+        } else if (eventIdentifier == GLFMLooperIDInput) {
+            glfm__onInputEvent(platformData);
+        } else if (eventIdentifier == GLFMLooperIDSensor) {
+            glfm__onSensorEvent(platformData);
+        }
+        if (platformData->destroyRequested) {
+            break;
+        }
+    }
+}
+
+int glfmGetAsset(GLFMDisplay* display, const char* filename, void* data, size_t* size)
+{
+    if (size == NULL)
+        return GLFM_ERR_INVALID_ARGUMENT;
+
+    if (!display || !display->platformData) {
+        *size = 0;
+        return GLFM_ERR_INVALID_ARGUMENT;
+    }
+    GLFMPlatformData *platformData = display->platformData;
+    AAsset* asset = AAssetManager_open(platformData->activity->assetManager, filename, 0);
+    if (!asset) {
+        *size = 0;
+        return GLFM_ERR_ASSET_NOT_FOUND;
+    }
+    size_t required = (size_t)AAsset_getLength(asset);
+    if (data == NULL) {
+        *size = required;
+        AAsset_close(asset);
+        return GLFM_ERR_OK;
+    }
+    const void* buffer = AAsset_getBuffer(asset);
+    if (*size < required) {
+        AAsset_close(asset);
+        return GLFM_ERR_SIZE_TOO_SMALL;
+    }
+    memcpy(data, buffer, required);
+    *size = required;
+    AAsset_close(asset);
+    return GLFM_ERR_OK;
 }
 
 #endif // __ANDROID__
