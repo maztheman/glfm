@@ -1,6 +1,9 @@
 # GLFM
 [![Build](https://github.com/brackeen/glfm/actions/workflows/build.yml/badge.svg)](https://github.com/brackeen/glfm/actions/workflows/build.yml)
 [![Build Examples](https://github.com/brackeen/glfm/actions/workflows/build_examples.yml/badge.svg)](https://github.com/brackeen/glfm/actions/workflows/build_examples.yml)
+# GLFM2 - This branch
+
+Use a GLFW like interface for mobile devices. This fork attempts to make it easier to use with ImGui.
 
 GLFM is a C API for mobile app development with OpenGL ES. It is largely inspired by
 [GLFW](https://github.com/glfw/glfw).
