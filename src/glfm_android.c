@@ -1646,6 +1646,35 @@ static void *glfm__mainLoop(void *param) {
     return NULL;
 }
 
+void glfmStartForegroundService(GLFMDisplay *display, const char* className)
+{
+    if (!display)
+        return;
+    GLFMPlatformData *platformData = (GLFMPlatformData *)display->platformData;
+    JNIEnv *env = platformData->jniEnv;
+    jclass activityClass = (*env)->GetObjectClass(env, platformData->activity->clazz);
+    jmethodID getPackageName = (*env)->GetMethodID(env, activityClass, "getPackageName", "()Ljava/lang/String;");
+    jstring packageName = (jstring)(*env)->CallObjectMethod(env, platformData->activity->clazz, getPackageName);
+
+    jclass intentClass = (*env)->FindClass(env, "android/content/Intent");
+    jmethodID intentInit = (*env)->GetMethodID(env, intentClass, "<init>", "(Ljava/lang/String;)V");
+
+    jstring serviceName = (*env)->NewStringUTF(env, className);
+
+    jobject intent = (*env)->NewObject(env, intentClass, intentInit, serviceName);
+
+    // For explicit intent (recommended)
+    jclass componentNameClass = (*env)->FindClass(env, "android/content/ComponentName");
+    jmethodID componentInit = (*env)->GetMethodID(env, componentNameClass, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V");
+    jobject component = (*env)->NewObject(env, componentNameClass, componentInit, packageName, serviceName);
+    jmethodID setComponent = (*env)->GetMethodID(env, intentClass, "setComponent", "(Landroid/content/ComponentName;)Landroid/content/Intent;");
+    (*env)->CallObjectMethod(env, intent, setComponent, component);
+
+    jmethodID startForegroundService = (*env)->GetMethodID(env, activityClass, "startForegroundService", "(Landroid/content/Intent;)Landroid/content/ComponentName;");
+    (*env)->CallObjectMethod(env, platformData->activity->clazz, startForegroundService, intent);
+}
+
+
 // MARK: - GLFM private functions
 
 static jobject glfm__getDecorView(JNIEnv *jni, GLFMPlatformData *platformData) {

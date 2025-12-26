@@ -874,6 +874,7 @@ int glfmAppShouldClose(void);
 /// Allow for configuration before create
 extern void glfmPreConfig(GLFMDisplay *display);
 
+void glfmStartForegroundService(GLFMDisplay *display, const char* className);
 
 #if defined(__APPLE__) || defined(GLFM_EXPOSE_NATIVE_APPLE)
 
