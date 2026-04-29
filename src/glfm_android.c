@@ -2944,4 +2944,41 @@ int glfmGetAsset(GLFMDisplay* display, const char* filename, void* data, size_t*
     return GLFM_ERR_OK;
 }
 
+void glfmSuppressAndroidSelection(GLFMDisplay *display)
+{
+    ANativeActivity* activity = glfmGetAndroidActivity(display);
+    JavaVM* jvm = activity->vm;
+    JNIEnv* env = NULL;
+    (*jvm)->AttachCurrentThread(jvm, &env, NULL);
+
+    // 1. Get Activity -> Window
+    jclass activityClass = (*env)->GetObjectClass(env, activity->clazz);
+    jmethodID getWindow = (*env)->GetMethodID(env, activityClass, "getWindow", "()Landroid/view/Window;");
+    jobject window = (*env)->CallObjectMethod(env, activity->clazz, getWindow);
+
+    // 2. Window -> DecorView (The actual view handling touch/IME)
+    jclass windowClass = (*env)->FindClass(env, "android/view/Window");
+    jmethodID getDecorView = (*env)->GetMethodID(env, windowClass, "getDecorView", "()Landroid/view/View;");
+    jobject decorView = (*env)->CallObjectMethod(env, window, getDecorView);
+
+    // 3. Disable Selection Action Mode
+    // We pass NULL to setCustomSelectionActionModeCallback to effectively 
+    // disable the system's default pop-up behavior.
+    jclass viewClass = (*env)->FindClass(env, "android/view/View");
+    jmethodID setCallback = (*env)->GetMethodID(env, viewClass, 
+        "setCustomSelectionActionModeCallback", "(Landroid/view/ActionMode$Callback;)V");
+    
+    if (setCallback) {
+        (*env)->CallVoidMethod(env, decorView, setCallback, NULL);
+    }
+
+    // 4. Force selection off to stop "Selection Anchors" from sticking
+    jmethodID setSelectable = (*env)->GetMethodID(env, viewClass, "setTextIsSelectable", "(Z)V");
+    if (setSelectable) {
+        (*env)->CallVoidMethod(env, decorView, setSelectable, JNI_FALSE);
+    }
+
+    (*jvm)->DetachCurrentThread(jvm);
+}
+
 #endif // __ANDROID__

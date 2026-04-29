@@ -913,6 +913,8 @@ void *glfmGetAndroidActivity(const GLFMDisplay *display);
 
 int glfmGetAsset(GLFMDisplay* display, const char* filename, void* data, size_t* size);
 
+void glfmSuppressAndroidSelection(GLFMDisplay *display);
+
 #endif // GLFM_EXPOSE_NATIVE_ANDROID
 
 #ifdef __cplusplus
